@@ -73,6 +73,7 @@ const exitAskWithoutMac = (e, win) => {
 
 const client = require('discord-rich-presence')('818936529484906596');
 
+<<<<<<< HEAD
 /**
  * Make data a Buffer.
  *
@@ -121,6 +122,10 @@ function parseSourceStringToList(sourceString) {
 
 export function initIpcMain(win, store, trayEventEmitter) {
   ipcMain.handle('unblock-music', async (_, track, source) => {
+=======
+export function initIpcMain(win, store, lrc) {
+  ipcMain.on('unblock-music', (event, track) => {
+>>>>>>> parent of caaf62e (fix: remove osdlyrics)
     // 兼容 unblockneteasemusic 所使用的 api 字段
     track.alias = track.alia || [];
     track.duration = track.dt || 0;
@@ -243,6 +248,14 @@ export function initIpcMain(win, store, trayEventEmitter) {
     log('removeProxy');
     win.webContents.session.setProxy({});
     store.set('proxy', '');
+  });
+
+  ipcMain.on('resizeOSDLyrics', (event, arg) => {
+    lrc.resizeOSDLyrics(arg);
+  });
+
+  ipcMain.on('toggleOSDLyrics', () => {
+    lrc.toggleOSDLyrics();
   });
 
   ipcMain.on('switchGlobalShortcutStatusTemporary', (e, status) => {

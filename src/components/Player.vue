@@ -97,6 +97,12 @@
         <div class="blank"></div>
         <div class="container" @click.stop>
           <button-icon
+            v-if="osdState"
+            :title="$t('player.osdLyrics')"
+            @click.native="toggleOSDLyrics"
+            ><svg-icon icon-class="osd-lyrics"
+          /></button-icon>
+          <button-icon
             :title="$t('player.nextUp')"
             :class="{
               active: $route.name === 'next',
@@ -176,6 +182,10 @@
 </template>
 
 <script>
+const electron =
+  process.env.IS_ELECTRON === true ? window.require('electron') : null;
+const ipcRenderer =
+  process.env.IS_ELECTRON === true ? electron.ipcRenderer : null;
 import { mapState, mapMutations, mapActions } from 'vuex';
 import '@/assets/css/slider.css';
 
@@ -210,15 +220,24 @@ export default {
         ? '音源来自酷我音乐'
         : '';
     },
+    osdState() {
+      return Boolean(ipcRenderer);
+    },
   },
   methods: {
     ...mapMutations(['toggleLyrics']),
     ...mapActions(['showToast', 'likeATrack']),
+<<<<<<< HEAD
     playNextTrack() {
       if (this.player.isPersonalFM) {
         this.player.playNextFMTrack();
       } else {
         this.player.playNextTrack();
+=======
+    toggleOSDLyrics() {
+      if (ipcRenderer) {
+        ipcRenderer.send('toggleOSDLyrics');
+>>>>>>> parent of caaf62e (fix: remove osdlyrics)
       }
     },
     goToNextTracksPage() {
