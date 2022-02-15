@@ -87,9 +87,7 @@
           >
             <svg-icon :icon-class="player.playing ? 'pause' : 'play'"
           /></button-icon>
-          <button-icon
-            :title="$t('player.next')"
-            @click.native="player.playNextTrack"
+          <button-icon :title="$t('player.next')" @click.native="playNextTrack"
             ><svg-icon icon-class="next"
           /></button-icon>
         </div>
@@ -98,6 +96,12 @@
       <div class="right-control-buttons">
         <div class="blank"></div>
         <div class="container" @click.stop>
+          <button-icon
+            v-if="osdState"
+            :title="$t('player.osdLyrics')"
+            @click.native="toggleOSDLyrics"
+            ><svg-icon icon-class="osd-lyrics"
+          /></button-icon>
           <button-icon
             :title="$t('player.nextUp')"
             :class="{
@@ -133,6 +137,13 @@
             :title="$t('player.shuffle')"
             @click.native="player.switchShuffle"
             ><svg-icon icon-class="shuffle"
+          /></button-icon>
+          <button-icon
+            v-if="settings.enableReversedMode"
+            :class="{ active: player.reversed, disabled: player.isPersonalFM }"
+            :title="$t('player.reversed')"
+            @click.native="player.switchReversed"
+            ><svg-icon icon-class="sort-up"
           /></button-icon>
           <div class="volume-control">
             <button-icon :title="$t('player.mute')" @click.native="player.mute">
@@ -171,6 +182,10 @@
 </template>
 
 <script>
+const electron =
+  process.env.IS_ELECTRON === true ? window.require('electron') : null;
+const ipcRenderer =
+  process.env.IS_ELECTRON === true ? electron.ipcRenderer : null;
 import { mapState, mapMutations, mapActions } from 'vuex';
 import '@/assets/css/slider.css';
 
@@ -205,10 +220,26 @@ export default {
         ? '音源来自酷我音乐'
         : '';
     },
+    osdState() {
+      return Boolean(ipcRenderer);
+    },
   },
   methods: {
     ...mapMutations(['toggleLyrics']),
     ...mapActions(['showToast', 'likeATrack']),
+<<<<<<< HEAD
+    playNextTrack() {
+      if (this.player.isPersonalFM) {
+        this.player.playNextFMTrack();
+      } else {
+        this.player.playNextTrack();
+=======
+    toggleOSDLyrics() {
+      if (ipcRenderer) {
+        ipcRenderer.send('toggleOSDLyrics');
+>>>>>>> parent of caaf62e (fix: remove osdlyrics)
+      }
+    },
     goToNextTracksPage() {
       if (this.player.isPersonalFM) return;
       this.$route.name === 'next'

@@ -101,10 +101,12 @@ export default {
     repeat: '循环播放',
     repeatTrack: '单曲循环',
     shuffle: '随机播放',
+    reversed: '倒序播放',
     play: '播放',
     pause: '暂停',
     mute: '静音',
     nextUp: '播放列表',
+    osdLyrics: '桌面歌词',
   },
   modal: {
     close: '关闭',
@@ -157,6 +159,7 @@ export default {
     enableGlobalShortcut: '启用全局快捷键',
     showLibraryDefault: '启动后显示音乐库',
     subTitleDefault: '副标题使用别名',
+    enableReversedMode: '启用倒序播放功能 (实验性功能)',
     lyricsBackground: {
       text: '显示歌词背景',
       off: '关闭',

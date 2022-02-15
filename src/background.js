@@ -8,6 +8,14 @@ import {
   globalShortcut,
   nativeTheme,
 } from 'electron';
+import {
+  isWindows,
+  isMac,
+  isLinux,
+  isDevelopment,
+  isCreateTray,
+  isCreateMpris,
+} from '@/utils/platform';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import { startNeteaseMusicApi } from './electron/services';
 import { initIpcMain } from './electron/ipcMain.js';
@@ -18,9 +26,11 @@ import { createDockMenu } from './electron/dockMenu';
 import { registerGlobalShortcut } from './electron/globalShortcut';
 import { autoUpdater } from 'electron-updater';
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer';
+import { EventEmitter } from 'events';
 import express from 'express';
 import expressProxy from 'express-http-proxy';
 import Store from 'electron-store';
+import { createMpris } from '@/electron/mpris';
 const clc = require('cli-color');
 const log = text => {
   console.log(`${clc.blueBright('[background.js]')} ${text}`);
@@ -69,15 +79,15 @@ const closeOnLinux = (e, win, store) => {
   }
 };
 
-const isWindows = process.platform === 'win32';
-const isMac = process.platform === 'darwin';
-const isLinux = process.platform === 'linux';
-const isDevelopment = process.env.NODE_ENV === 'development';
-
 class Background {
   constructor() {
     this.window = null;
+<<<<<<< HEAD
+    this.ypmTrayImpl = null;
+=======
+    this.osdlyrics = null;
     this.tray = null;
+>>>>>>> parent of caaf62e (fix: remove osdlyrics)
     this.store = new Store({
       windowWidth: {
         width: { type: 'number', default: 1440 },
@@ -110,6 +120,14 @@ class Background {
 
     // handle app events
     this.handleAppEvents();
+
+    // disable chromium mpris
+    if (isCreateMpris) {
+      app.commandLine.appendSwitch(
+        'disable-features',
+        'HardwareMediaKeyHandling,MediaSessionService'
+      );
+    }
   }
 
   async initDevtools() {
@@ -212,6 +230,71 @@ class Background {
     }
   }
 
+  createOSDWindow() {
+    this.osdlyrics = new BrowserWindow({
+      x: this.store.get('osdlyrics.x-pos') || 0,
+      y: this.store.get('osdlyrics.y-pos') || 0,
+      width: this.store.get('osdlyrics.width') || 840,
+      height: this.store.get('osdlyrics.height') || 110,
+      title: 'OSD Lyrics',
+      transparent: true,
+      frame: false,
+      webPreferences: {
+        webSecurity: false,
+        nodeIntegration: true,
+        enableRemoteModule: true,
+        contextIsolation: false,
+      },
+    });
+    this.osdlyrics.setAlwaysOnTop(true, 'screen');
+
+    if (process.env.WEBPACK_DEV_SERVER_URL) {
+      // Load the url of the dev server if in development mode
+      this.osdlyrics.loadURL(
+        process.env.WEBPACK_DEV_SERVER_URL + '/osdlyrics.html'
+      );
+      if (!process.env.IS_TEST) this.osdlyrics.webContents.openDevTools();
+    } else {
+      this.osdlyrics.loadURL('http://localhost:27232/osdlyrics.html');
+    }
+  }
+
+  initOSDLyrics() {
+    const osdState = this.store.get('osdlyrics.show') || false;
+    if (osdState) {
+      this.showOSDLyrics();
+    }
+  }
+
+  toggleOSDLyrics() {
+    const osdState = this.store.get('osdlyrics.show') || false;
+    if (osdState) {
+      this.hideOSDLyrics();
+    } else {
+      this.showOSDLyrics();
+    }
+  }
+
+  showOSDLyrics() {
+    this.store.set('osdlyrics.show', true);
+    if (!this.osdlyrics) {
+      this.createOSDWindow();
+      this.handleOSDEvents();
+    }
+  }
+
+  hideOSDLyrics() {
+    this.store.set('osdlyrics.show', false);
+    if (this.osdlyrics) {
+      this.osdlyrics.close();
+    }
+  }
+
+  resizeOSDLyrics(height) {
+    const width = this.store.get('osdlyrics.width') || 840;
+    this.osdlyrics.setSize(width, height);
+  }
+
   checkForUpdates() {
     if (isDevelopment) return;
     log('checkForUpdates');
@@ -238,6 +321,30 @@ class Background {
 
     autoUpdater.on('update-available', info => {
       showNewVersionMessage(info);
+    });
+  }
+
+  handleOSDEvents() {
+    this.osdlyrics.once('ready-to-show', () => {
+      log('OSD ready-to-show event');
+      this.osdlyrics.show();
+    });
+
+    this.osdlyrics.on('closed', e => {
+      log('OSD close event');
+      this.osdlyrics = null;
+    });
+
+    this.osdlyrics.on('resized', () => {
+      let { height, width } = this.osdlyrics.getBounds();
+      this.store.set('osdlyrics.width', width);
+      this.store.set('osdlyrics.height', height);
+    });
+
+    this.osdlyrics.on('moved', () => {
+      var pos = this.osdlyrics.getPosition();
+      this.store.set('osdlyrics.x-pos', pos[0]);
+      this.store.set('osdlyrics.y-pos', pos[1]);
     });
   }
 
@@ -324,8 +431,24 @@ class Background {
       });
       this.handleWindowEvents();
 
+<<<<<<< HEAD
+      // create tray
+      if (isCreateTray) {
+        this.trayEventEmitter = new EventEmitter();
+        this.ypmTrayImpl = createTray(this.window, this.trayEventEmitter);
+      }
+
       // init ipcMain
-      initIpcMain(this.window, this.store);
+      initIpcMain(this.window, this.store, this.trayEventEmitter);
+=======
+      this.initOSDLyrics();
+
+      // init ipcMain
+      initIpcMain(this.window, this.store, {
+        resizeOSDLyrics: height => this.resizeOSDLyrics(height),
+        toggleOSDLyrics: () => this.toggleOSDLyrics(),
+      });
+>>>>>>> parent of caaf62e (fix: remove osdlyrics)
 
       // set proxy
       const proxyRules = this.store.get('proxy');
@@ -341,11 +464,6 @@ class Background {
       // create menu
       createMenu(this.window, this.store);
 
-      // create tray
-      if (isWindows || isLinux || isDevelopment) {
-        this.tray = createTray(this.window);
-      }
-
       // create dock menu for macOS
       const createdDockMenu = createDockMenu(this.window);
       if (createDockMenu && app.dock) app.dock.setMenu(createdDockMenu);
@@ -357,6 +475,11 @@ class Background {
       // register global shortcuts
       if (this.store.get('settings.enableGlobalShortcut') !== false) {
         registerGlobalShortcut(this.window, this.store);
+      }
+
+      // create mpris
+      if (isCreateMpris) {
+        createMpris(this.window);
       }
     });
 
